@@ -5,6 +5,7 @@ import type { NextAuthConfig } from "next-auth";
  * Used by middleware only. Does not include providers with bcrypt/prisma.
  */
 export const authEdgeConfig: NextAuthConfig = {
+  trustHost: true,
   providers: [], // Providers are added in the full auth.config.ts
   pages: {
     signIn: "/login",
