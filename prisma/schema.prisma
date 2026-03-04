@@ -1,0 +1,308 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ========================
+// ENUMS
+// ========================
+
+enum Role {
+  ADMIN
+  OPERADOR
+}
+
+enum VehicleType {
+  CARRO
+  MOTO
+  CAMINHONETE
+  VAN
+  CAMINHAO
+  ONIBUS
+  UTILITARIO
+}
+
+enum VehicleStatus {
+  DISPONIVEL
+  ALUGADO
+  MANUTENCAO
+  INATIVO
+}
+
+enum ClientStatus {
+  ATIVO
+  INATIVO
+  INADIMPLENTE
+}
+
+enum ContractStatus {
+  ATIVO
+  ENCERRADO
+  CANCELADO
+}
+
+enum BillingStatus {
+  PENDENTE
+  PAGO
+  VENCIDO
+  CANCELADO
+}
+
+enum RevenueType {
+  ALUGUEL
+  MULTA_CLIENTE
+  SEGURO
+  OUTROS
+}
+
+enum ExpenseCategory {
+  FIXA
+  VARIAVEL
+}
+
+enum ExpenseType {
+  IPVA
+  SEGURO
+  MANUTENCAO
+  COMBUSTIVEL
+  MULTA
+  LAVAGEM
+  PNEU
+  DOCUMENTACAO
+  OUTROS
+}
+
+enum FineStatus {
+  PENDENTE
+  PAGA
+  RECURSO
+  CANCELADA
+}
+
+enum PaymentMethod {
+  PIX
+  DINHEIRO
+  CARTAO_CREDITO
+  CARTAO_DEBITO
+  BOLETO
+  TRANSFERENCIA
+}
+
+// ========================
+// MODELS
+// ========================
+
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role     @default(OPERADOR)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("users")
+}
+
+model Vehicle {
+  id              String        @id @default(cuid())
+  placa           String        @unique
+  marca           String
+  modelo          String
+  anoFabricacao   Int
+  anoModelo       Int
+  cor             String
+  chassi          String?
+  renavam         String?
+  tipo            VehicleType   @default(CARRO)
+  status          VehicleStatus @default(DISPONIVEL)
+  valorMensal     Decimal       @db.Decimal(10, 2)
+  kmAtual         Int           @default(0)
+  kmProximaTroca  Int?
+  observacoes     String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  deletedAt       DateTime?
+
+  contracts    Contract[]
+  revenues     Revenue[]
+  expenses     Expense[]
+  maintenances Maintenance[]
+  fines        Fine[]
+  billings     Billing[]
+  attachments  Attachment[]
+
+  @@map("vehicles")
+}
+
+model Client {
+  id           String       @id @default(cuid())
+  name         String
+  cpf          String       @unique
+  rg           String?
+  phone        String
+  email        String?
+  cep          String?
+  endereco     String?
+  numero       String?
+  complemento  String?
+  bairro       String?
+  cidade       String?
+  estado       String?
+  cnh          String?
+  cnhValidade  DateTime?
+  status       ClientStatus @default(ATIVO)
+  observacoes  String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  deletedAt    DateTime?
+
+  contracts Contract[]
+
+  @@map("clients")
+}
+
+model Contract {
+  id           String         @id @default(cuid())
+  clientId     String
+  vehicleId    String
+  startDate    DateTime
+  endDate      DateTime
+  monthlyValue Decimal        @db.Decimal(10, 2)
+  paymentDay   Int            @default(5)
+  status       ContractStatus @default(ATIVO)
+  observacoes  String?
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+
+  client      Client    @relation(fields: [clientId], references: [id])
+  vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])
+  billings    Billing[]
+  revenues    Revenue[]
+  attachments Attachment[]
+
+  @@map("contracts")
+}
+
+model Billing {
+  id            String        @id @default(cuid())
+  contractId    String
+  dueDate       DateTime
+  amount        Decimal       @db.Decimal(10, 2)
+  status        BillingStatus @default(PENDENTE)
+  paidAt        DateTime?
+  paymentMethod PaymentMethod?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  contract Contract @relation(fields: [contractId], references: [id])
+  vehicle  Vehicle  @relation(fields: [vehicleId], references: [id])
+  vehicleId String
+  revenue  Revenue?
+
+  @@map("billings")
+}
+
+model Revenue {
+  id            String        @id @default(cuid())
+  description   String
+  amount        Decimal       @db.Decimal(10, 2)
+  date          DateTime
+  type          RevenueType
+  vehicleId     String?
+  contractId    String?
+  billingId     String?       @unique
+  paymentMethod PaymentMethod
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  vehicle  Vehicle?  @relation(fields: [vehicleId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+  billing  Billing?  @relation(fields: [billingId], references: [id])
+
+  @@map("revenues")
+}
+
+model Expense {
+  id            String          @id @default(cuid())
+  description   String
+  amount        Decimal         @db.Decimal(10, 2)
+  date          DateTime
+  category      ExpenseCategory
+  type          ExpenseType
+  vehicleId     String?
+  paymentMethod PaymentMethod?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id])
+
+  @@map("expenses")
+}
+
+model Maintenance {
+  id          String   @id @default(cuid())
+  vehicleId   String
+  description String
+  cost        Decimal? @db.Decimal(10, 2)
+  date        DateTime
+  km          Int
+  type        String   @default("MANUTENCAO") // MANUTENCAO | TROCA_OLEO
+  createdAt   DateTime @default(now())
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@map("maintenances")
+}
+
+model Fine {
+  id            String      @id @default(cuid())
+  vehicleId     String
+  description   String
+  amount        Decimal     @db.Decimal(10, 2)
+  date          DateTime
+  dueDate       DateTime?
+  autoInfracao  String?
+  status        FineStatus  @default(PENDENTE)
+  paymentMethod PaymentMethod?
+  paidAt        DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id])
+
+  @@map("fines")
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  filename     String
+  originalName String
+  mimeType     String
+  size         Int
+  path         String
+  description  String?
+  vehicleId    String?
+  contractId   String?
+  createdAt    DateTime @default(now())
+
+  vehicle  Vehicle?  @relation(fields: [vehicleId], references: [id])
+  contract Contract? @relation(fields: [contractId], references: [id])
+
+  @@map("attachments")
+}
+
+model CompanySettings {
+  id          String  @id @default(cuid())
+  companyName String  @default("Locadora de Veículos")
+  cnpj        String  @default("")
+  endereco    String  @default("")
+  telefone    String  @default("")
+  email       String  @default("")
+  logoUrl     String?
+
+  @@map("company_settings")
+}
