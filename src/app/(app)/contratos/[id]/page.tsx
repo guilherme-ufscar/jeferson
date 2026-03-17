@@ -110,8 +110,24 @@ export default function ContratoDetailPage() {
             </div>
             <InfoRow label="Data Início" value={formatDate(contract.startDate as string)} />
             <InfoRow label="Data Fim" value={formatDate(contract.endDate as string)} />
-            <InfoRow label="Valor Mensal" value={formatCurrency(contract.monthlyValue as number)} />
-            <InfoRow label="Dia Vencimento" value={String(contract.paymentDay)} />
+            {(contract.weeklyValue as number) > 0 && (
+              <InfoRow label="Valor Semanal" value={formatCurrency(contract.weeklyValue as number)} />
+            )}
+            {(contract.monthlyValue as number) > 0 && (
+              <InfoRow label="Valor Mensal" value={formatCurrency(contract.monthlyValue as number)} />
+            )}
+            {(contract.valorCaucao as number) > 0 && (
+              <InfoRow label="Caução" value={formatCurrency(contract.valorCaucao as number)} />
+            )}
+            {(contract.valorMultaAtraso as number) > 0 && (
+              <InfoRow label="Multa por Atraso" value={formatCurrency(contract.valorMultaAtraso as number)} />
+            )}
+            {(contract.kmEntrega as number) > 0 && (
+              <InfoRow label="KM na Entrega" value={`${(contract.kmEntrega as number).toLocaleString("pt-BR")} km`} />
+            )}
+            {(contract.porcentagemMensal as number) > 0 && (
+              <InfoRow label="Taxa Mensal" value={`${contract.porcentagemMensal}%`} />
+            )}
           </CardContent>
         </Card>
 

@@ -5,7 +5,12 @@ export const contractSchema = z.object({
   vehicleId: z.string().min(1, "Veículo é obrigatório"),
   startDate: z.string().min(1, "Data de início é obrigatória"),
   endDate: z.string().min(1, "Data de término é obrigatória"),
-  monthlyValue: z.coerce.number().positive("Valor mensal deve ser positivo"),
+  weeklyValue: z.coerce.number().positive("Valor semanal deve ser positivo").optional(),
+  monthlyValue: z.coerce.number().positive("Valor mensal deve ser positivo").optional(),
+  valorCaucao: z.coerce.number().min(0).optional().nullable(),
+  valorMultaAtraso: z.coerce.number().min(0).optional().nullable(),
+  kmEntrega: z.coerce.number().int().min(0).optional().nullable(),
+  porcentagemMensal: z.coerce.number().min(0).max(100).optional().nullable(),
   paymentDay: z.coerce.number().int().min(1).max(31, "Dia de vencimento inválido (1-31)").default(5),
   observacoes: z.string().optional().nullable(),
 });

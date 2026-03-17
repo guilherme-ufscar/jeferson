@@ -1,6 +1,6 @@
 import { prisma } from "@/lib/prisma";
 import { ContractStatus, VehicleStatus } from "@prisma/client";
-import { addMonths, isAfter } from "date-fns";
+import { addMonths, addWeeks, isAfter } from "date-fns";
 
 export async function listContracts(filters?: {
   search?: string;
@@ -48,7 +48,12 @@ export async function createContract(data: {
   vehicleId: string;
   startDate: string;
   endDate: string;
-  monthlyValue: number;
+  weeklyValue?: number;
+  monthlyValue?: number;
+  valorCaucao?: number | null;
+  valorMultaAtraso?: number | null;
+  kmEntrega?: number | null;
+  porcentagemMensal?: number | null;
   paymentDay?: number;
   observacoes?: string | null;
 }) {
@@ -76,15 +81,31 @@ export async function createContract(data: {
   const endDate = new Date(data.endDate);
   const paymentDay = data.paymentDay || 5;
 
-  // Generate monthly billing dates
+  // Determine billing mode and amount
+  const isWeekly = !!data.weeklyValue;
+  const billingAmount = data.weeklyValue || data.monthlyValue || 0;
+  if (billingAmount <= 0) throw new Error("É necessário informar o valor do aluguel semanal ou mensal");
+
+  // Generate billing dates
   const billingDates: Date[] = [];
-  let current = new Date(startDate.getFullYear(), startDate.getMonth(), paymentDay);
-  if (!isAfter(current, startDate)) {
-    current = addMonths(current, 1);
-  }
-  while (!isAfter(current, endDate)) {
-    billingDates.push(new Date(current));
-    current = addMonths(current, 1);
+
+  if (isWeekly) {
+    // Weekly billing: first billing 7 days after start, then every 7 days
+    let current = addWeeks(new Date(startDate), 1);
+    while (!isAfter(current, endDate)) {
+      billingDates.push(new Date(current));
+      current = addWeeks(current, 1);
+    }
+  } else {
+    // Monthly billing: on paymentDay each month
+    let current = new Date(startDate.getFullYear(), startDate.getMonth(), paymentDay);
+    if (!isAfter(current, startDate)) {
+      current = addMonths(current, 1);
+    }
+    while (!isAfter(current, endDate)) {
+      billingDates.push(new Date(current));
+      current = addMonths(current, 1);
+    }
   }
 
   // Create contract + billings + update vehicle in a transaction
@@ -95,30 +116,38 @@ export async function createContract(data: {
         vehicleId: data.vehicleId,
         startDate,
         endDate,
-        monthlyValue: data.monthlyValue,
+        weeklyValue: data.weeklyValue ?? undefined,
+        monthlyValue: data.monthlyValue ?? undefined,
+        valorCaucao: data.valorCaucao ?? undefined,
+        valorMultaAtraso: data.valorMultaAtraso ?? undefined,
+        kmEntrega: data.kmEntrega ?? undefined,
+        porcentagemMensal: data.porcentagemMensal ?? undefined,
         paymentDay,
         observacoes: data.observacoes || null,
         status: "ATIVO",
       },
     });
 
-    // Generate monthly billings
+    // Generate billings
     if (billingDates.length > 0) {
       await tx.billing.createMany({
         data: billingDates.map((date) => ({
           contractId: newContract.id,
           vehicleId: data.vehicleId,
-          amount: data.monthlyValue,
+          amount: billingAmount as number,
           dueDate: date,
           status: "PENDENTE",
         })),
       });
     }
 
-    // Update vehicle status to ALUGADO
+    // Update vehicle status to ALUGADO (and update km if provided)
     await tx.vehicle.update({
       where: { id: data.vehicleId },
-      data: { status: "ALUGADO" },
+      data: {
+        status: "ALUGADO",
+        ...(data.kmEntrega != null ? { kmAtual: data.kmEntrega } : {}),
+      },
     });
 
     return newContract;
@@ -166,4 +195,3 @@ export async function closeContract(
     return updated;
   });
 }
-
