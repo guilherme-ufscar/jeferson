@@ -166,17 +166,22 @@ model Client {
 }
 
 model Contract {
-  id           String         @id @default(cuid())
-  clientId     String
-  vehicleId    String
-  startDate    DateTime
-  endDate      DateTime
-  monthlyValue Decimal        @db.Decimal(10, 2)
-  paymentDay   Int            @default(5)
-  status       ContractStatus @default(ATIVO)
-  observacoes  String?
-  createdAt    DateTime       @default(now())
-  updatedAt    DateTime       @updatedAt
+  id                String         @id @default(cuid())
+  clientId          String
+  vehicleId         String
+  startDate         DateTime
+  endDate           DateTime
+  monthlyValue      Decimal?       @db.Decimal(10, 2)
+  weeklyValue       Decimal?       @db.Decimal(10, 2)
+  valorCaucao       Decimal?       @db.Decimal(10, 2)
+  valorMultaAtraso  Decimal?       @db.Decimal(10, 2)
+  kmEntrega         Int?
+  porcentagemMensal Decimal?       @db.Decimal(5, 2)
+  paymentDay        Int            @default(5)
+  status            ContractStatus @default(ATIVO)
+  observacoes       String?
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
 
   client      Client    @relation(fields: [clientId], references: [id])
   vehicle     Vehicle   @relation(fields: [vehicleId], references: [id])

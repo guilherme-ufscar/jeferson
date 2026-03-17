@@ -16,8 +16,18 @@ import {
   TrendingDown,
   Clock,
   Ban,
+  BarChart3,
 } from "lucide-react";
 import Link from "next/link";
+
+interface VehicleRankingItem {
+  id: string;
+  placa: string;
+  modelo: string;
+  receita: number;
+  despesa: number;
+  lucro: number;
+}
 
 interface DashboardData {
   totalVehicles: number;
@@ -42,6 +52,7 @@ interface DashboardData {
     startDate: string;
     status: string;
   }>;
+  vehicleRanking: VehicleRankingItem[];
 }
 
 export default function DashboardPage() {
@@ -229,6 +240,55 @@ export default function DashboardPage() {
                   </Badge>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Vehicle Ranking */}
+      {data.vehicleRanking && data.vehicleRanking.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <BarChart3 className="h-4 w-4" />
+              Resultado por Veículo (Geral)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b text-left">
+                    <th className="pb-2 font-medium">Placa</th>
+                    <th className="pb-2 font-medium">Veículo</th>
+                    <th className="pb-2 font-medium text-right">Receita</th>
+                    <th className="pb-2 font-medium text-right">Despesa</th>
+                    <th className="pb-2 font-medium text-right">Lucro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {data.vehicleRanking.map((v) => (
+                    <tr key={v.id} className="border-b last:border-0 hover:bg-muted/50">
+                      <td className="py-2">
+                        <Link href={`/veiculos/${v.id}`} className="font-mono hover:underline">
+                          {v.placa}
+                        </Link>
+                      </td>
+                      <td className="py-2 text-muted-foreground">{v.modelo}</td>
+                      <td className="py-2 text-right text-green-600">{formatCurrency(v.receita)}</td>
+                      <td className="py-2 text-right text-red-600">{formatCurrency(v.despesa)}</td>
+                      <td className={`py-2 text-right font-semibold ${v.lucro >= 0 ? "text-green-600" : "text-red-600"}`}>
+                        {formatCurrency(v.lucro)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <div className="mt-3 text-right">
+              <Link href="/relatorios/lucro-por-veiculo" className="text-sm text-zinc-600 underline hover:text-zinc-900">
+                Ver relatório completo →
+              </Link>
             </div>
           </CardContent>
         </Card>

@@ -4,7 +4,7 @@ import { getVehicleStats } from "./veiculo.service";
 import { getOverdueCount } from "./cobranca.service";
 import { getOpenFinesCount } from "./multa.service";
 import { getUpcomingOilChanges } from "./manutencao.service";
-import { getCompanyProfitReport } from "./relatorio.service";
+import { getCompanyProfitReport, getVehicleProfitReport } from "./relatorio.service";
 
 export async function getDashboardData(month?: string) {
   const now = new Date();
@@ -21,7 +21,11 @@ export async function getDashboardData(month?: string) {
     to.setDate(to.getDate() + 1);
   }
 
-  const [vehicleStats, overdueInfo, finesInfo, oilChanges, profit, activeClients, activeContracts, recentContracts] =
+  // All-time range for vehicle profit ranking
+  const allTimeFrom = new Date(2000, 0, 1);
+  const allTimeTo = new Date(now.getFullYear() + 1, 11, 31);
+
+  const [vehicleStats, overdueInfo, finesInfo, oilChanges, profit, activeClients, activeContracts, recentContracts, vehicleProfits] =
     await Promise.all([
       getVehicleStats(),
       getOverdueCount(),
@@ -38,7 +42,21 @@ export async function getDashboardData(month?: string) {
           vehicle: { select: { placa: true, modelo: true } },
         },
       }),
+      getVehicleProfitReport(allTimeFrom, allTimeTo),
     ]);
+
+  // Top 5 most and least profitable vehicles
+  const vehicleRanking = vehicleProfits
+    .filter((v) => v.receita > 0 || v.despesa > 0)
+    .slice(0, 5)
+    .map((v) => ({
+      id: v.id,
+      placa: v.placa,
+      modelo: `${v.marca} ${v.modelo}`,
+      receita: v.receita,
+      despesa: v.despesa,
+      lucro: v.lucro,
+    }));
 
   return {
     totalVehicles: vehicleStats.total,
@@ -57,5 +75,6 @@ export async function getDashboardData(month?: string) {
       urgency: v.urgencia === "atrasado" ? "atrasado" : "proximo",
     })),
     recentContracts,
+    vehicleRanking,
   };
 }
